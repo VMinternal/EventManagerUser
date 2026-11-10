@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace EventManagerUser
 {
@@ -35,16 +37,26 @@ namespace EventManagerUser
                         {
                             var eventModel = new EventModel();
 
-                            // Extract the Document ID from the "name" path (e.g., projects/.../documents/events/ID_ABC)
+                            // Use the Document ID from the path name as a fallback.
+                            string docId = string.Empty;
                             if (docElement.TryGetProperty("name", out var nameProp))
                             {
                                 string fullName = nameProp.GetString();
-                                eventModel.Id = fullName?.Split('/').Last();
+                                docId = fullName?.Split('/').Last() ?? string.Empty;
                             }
 
                             // Read data fields structured in Firestore REST JSON format
                             if (docElement.TryGetProperty("fields", out var fieldsProp))
                             {
+                                // Retrieve the "id" field from the Firestore fields to match the `eventId` of the sessions exactly.
+                                eventModel.Id = GetStringField(fieldsProp, "id");
+
+                                // If the "id" field is empty, use the Document ID as a fallback.
+                                if (string.IsNullOrEmpty(eventModel.Id))
+                                {
+                                    eventModel.Id = docId;
+                                }
+
                                 eventModel.Name = GetStringField(fieldsProp, "name");
                                 eventModel.Location = GetStringField(fieldsProp, "location");
                                 eventModel.Date = GetStringField(fieldsProp, "date");
@@ -68,13 +80,84 @@ namespace EventManagerUser
             return eventList;
         }
 
-        // Helper function to extract string data types from Firestore JSON
+        // Function to retrieve sessions by Event ID (Foreign Key linked to Event)
+        public async Task<List<EventSession>> GetSessionsByEventIdAsync(string eventId)
+        {
+            var sessionList = new List<EventSession>();
+            string url = $"https://firestore.googleapis.com/v1/projects/{ProjectId}/databases/(default)/documents/sessions";
+
+            try
+            {
+                var response = await _httpClient.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonString = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(jsonString);
+
+                    if (doc.RootElement.TryGetProperty("documents", out var docsElement))
+                    {
+                        foreach (var docElement in docsElement.EnumerateArray())
+                        {
+                            var session = new EventSession();
+
+                            if (docElement.TryGetProperty("name", out var nameProp))
+                            {
+                                session.Id = nameProp.GetString()?.Split('/').Last();
+                            }
+
+                            if (docElement.TryGetProperty("fields", out var fieldsProp))
+                            {
+                                session.EventId = GetStringField(fieldsProp, "eventId");
+                                session.SessionName = GetStringField(fieldsProp, "sessionName");
+                                session.Speaker = GetStringField(fieldsProp, "speaker");
+                                session.StartTime = GetStringField(fieldsProp, "startTime");
+                                session.EndTime = GetStringField(fieldsProp, "endTime");
+                                session.Description = GetStringField(fieldsProp, "description");
+                            }
+
+                            // Debug and cross-check the ID between the Session and the target Event.
+                            System.Diagnostics.Debug.WriteLine($"[DEBUG SESSION] Name: {session.SessionName} | Session EventId: '{session.EventId}' vs Target EventId: '{eventId}'");
+
+                            // Comparing the safe use of Trim() with case-insensitive handling
+                            if (!string.IsNullOrEmpty(session.EventId) &&
+                                !string.IsNullOrEmpty(eventId) &&
+                                session.EventId.Trim().Equals(eventId.Trim(), StringComparison.OrdinalIgnoreCase))
+                            {
+                                sessionList.Add(session);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error fetching sessions: {ex.Message}");
+            }
+
+            return sessionList;
+        }
+
+        // Helper function to extract string data types from Firestore JSON securely
         private string GetStringField(JsonElement fields, string fieldName)
         {
-            if (fields.TryGetProperty(fieldName, out var fieldProp) &&
-                fieldProp.TryGetProperty("stringValue", out var valProp))
+            if (fields.TryGetProperty(fieldName, out var fieldProp))
             {
-                return valProp.GetString();
+                if (fieldProp.TryGetProperty("stringValue", out var valProp))
+                {
+                    return valProp.GetString() ?? string.Empty;
+                }
+                if (fieldProp.TryGetProperty("integerValue", out var intProp))
+                {
+                    if (intProp.ValueKind == JsonValueKind.String)
+                    {
+                        return intProp.GetString() ?? string.Empty;
+                    }
+                    else if (intProp.ValueKind == JsonValueKind.Number)
+                    {
+                        return intProp.GetInt32().ToString();
+                    }
+                    return intProp.GetRawText().Trim('"');
+                }
             }
             return string.Empty;
         }

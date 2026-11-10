@@ -17,10 +17,20 @@
         {
             var rawEvents = await _firebaseService.GetEventsAsync();
 
-            _allEvents = rawEvents
-             .GroupBy(e => e.Name?.Trim().ToLower())
-             .Select(g => g.First())
-             .ToList();
+            // Filter out events with duplicate names beforehand to optimize the number of API calls.
+            var uniqueEvents = rawEvents
+                .GroupBy(e => e.Name?.Trim().ToLower())
+                .Select(g => g.First())
+                .ToList();
+
+            // Iterate through each unique event to retrieve the corresponding list of sessions via the eventId.
+            foreach (var ev in uniqueEvents)
+            {
+                ev.Sessions = await _firebaseService.GetSessionsByEventIdAsync(ev.Id);
+            }
+
+            // Bind the complete list to the UI
+            _allEvents = uniqueEvents;
             EventsCollection.ItemsSource = _allEvents;
         }
 
@@ -44,7 +54,7 @@
             }
         }
 
-        //Handling the 'Favorite' button click event
+        // Handling the 'Favorite' button click event
         private void OnFavoriteClicked(object sender, EventArgs e)
         {
             if (sender is Button button && button.CommandParameter is string eventId)
@@ -56,6 +66,16 @@
                     // Change the heart icon when selected or deselected
                     button.Text = eventItem.IsFavorite ? "❤️" : "🤍";
                 }
+            }
+        }
+
+        // Handle the button-click event to open the details page & view a separate list of sessions
+        private async void OnViewSessionsClicked(object sender, EventArgs e)
+        {
+            if (sender is Button button && button.CommandParameter is EventModel selectedEvent)
+            {
+                // Navigate to the EventDetailPage and pass the selected event object to it.
+                await Navigation.PushAsync(new EventDetailPage(selectedEvent));
             }
         }
     }

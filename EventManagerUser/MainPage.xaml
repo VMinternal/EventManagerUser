@@ -39,6 +39,16 @@
                             <Label Text="{Binding Location, StringFormat='📍 Location: {0}'}" FontSize="14" TextColor="#555"/>
                             <Label Text="{Binding Description}" FontSize="13" TextColor="#777" MaxLines="2"/>
 
+                            <!-- Button to open the details page & view individual sessions -->
+                            <Button Text="See Details &amp; Sessions ➡️" 
+                                    Clicked="OnViewSessionsClicked"
+                                    CommandParameter="{Binding .}"
+                                    BackgroundColor="#512BD4"
+                                    TextColor="White"
+                                    FontSize="13"
+                                    CornerRadius="8"
+                                    Margin="0,8,0,0"/>
+
                         </VerticalStackLayout>
                     </Frame>
                 </DataTemplate>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="EventManagerUser.EventDetailPage"
+             Title="Chi tiết Sự kiện &amp; Sessions">
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="12">
+
+            <!-- Event details -->
+            <Frame BackgroundColor="#FFFFFF" Padding="15" CornerRadius="12" BorderColor="#E0E0E0">
+                <VerticalStackLayout Spacing="8">
+                    <Label x:Name="LblEventName" FontSize="20" FontAttributes="Bold" TextColor="#222"/>
+                    <Label x:Name="LblDate" FontSize="14" TextColor="#555"/>
+                    <Label x:Name="LblLocation" FontSize="14" TextColor="#555"/>
+                    <Label x:Name="LblDescription" FontSize="13" TextColor="#777"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <BoxView HeightRequest="1" BackgroundColor="#E0E0E0" Margin="0,5"/>
+
+            <!-- Sessions List Title -->
+            <Label Text="List of sessions:" FontSize="16" FontAttributes="Bold" TextColor="#333"/>
+
+            <!--The CollectionView displays a list of sessions for this event. -->
+            <CollectionView x:Name="SessionsCollection">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame BackgroundColor="#F8F9FA" Padding="12" CornerRadius="8" Margin="0,4" BorderColor="#E5E5E5">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding SessionName, StringFormat='🔹 Session: {0}'}" FontSize="14" FontAttributes="Bold" TextColor="#333"/>
+                                <Label Text="{Binding Speaker, StringFormat='🎤 Speaker: {0}'}" FontSize="13" TextColor="#555"/>
+                                <HorizontalStackLayout Spacing="10">
+                                    <Label Text="{Binding StartTime, StringFormat='⏰ Begin: {0}'}" FontSize="12" TextColor="#777"/>
+                                    <Label Text="{Binding EndTime, StringFormat='- End: {0}'}" FontSize="12" TextColor="#777"/>
+                                </HorizontalStackLayout>
+                                <Label Text="{Binding Description}" FontSize="12" TextColor="#666" Margin="0,2,0,0"/>
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
