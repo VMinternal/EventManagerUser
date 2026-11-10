@@ -2,23 +2,61 @@
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
+        private readonly FirebaseService _firebaseService;
+        private List<EventModel> _allEvents = new();
 
         public MainPage()
         {
             InitializeComponent();
+            _firebaseService = new FirebaseService();
+            LoadEventsData();
         }
 
-        private void OnCounterClicked(object? sender, EventArgs e)
+        // Load the list of events from Firebase when the application starts
+        private async void LoadEventsData()
         {
-            count++;
+            var rawEvents = await _firebaseService.GetEventsAsync();
 
-            if (count == 1)
-                CounterBtn.Text = $"Clicked {count} time";
+            _allEvents = rawEvents
+             .GroupBy(e => e.Name?.Trim().ToLower())
+             .Select(g => g.First())
+             .ToList();
+            EventsCollection.ItemsSource = _allEvents;
+        }
+
+        // Search function by Name or Event Date
+        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        {
+            var keyword = e.NewTextValue?.ToLower() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                EventsCollection.ItemsSource = _allEvents;
+            }
             else
-                CounterBtn.Text = $"Clicked {count} times";
+            {
+                var filteredList = _allEvents.Where(ev =>
+                    (ev.Name != null && ev.Name.ToLower().Contains(keyword)) ||
+                    (ev.Date != null && ev.Date.ToLower().Contains(keyword))
+                ).ToList();
 
-            SemanticScreenReader.Announce(CounterBtn.Text);
+                EventsCollection.ItemsSource = filteredList;
+            }
+        }
+
+        //Handling the 'Favorite' button click event
+        private void OnFavoriteClicked(object sender, EventArgs e)
+        {
+            if (sender is Button button && button.CommandParameter is string eventId)
+            {
+                var eventItem = _allEvents.FirstOrDefault(x => x.Id == eventId);
+                if (eventItem != null)
+                {
+                    eventItem.IsFavorite = !eventItem.IsFavorite;
+                    // Change the heart icon when selected or deselected
+                    button.Text = eventItem.IsFavorite ? "❤️" : "🤍";
+                }
+            }
         }
     }
 }

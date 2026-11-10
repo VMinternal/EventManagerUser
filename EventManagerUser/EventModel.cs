@@ -17,5 +17,7 @@ namespace EventManagerUser
         public string ContactPhone { get; set; }
 
         public bool IsFavorite { get; set; }
+
+        public List<EventSession> Sessions { get; set; } = new();
     }
 }
