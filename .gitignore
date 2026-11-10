@@ -1,0 +1,6 @@
+﻿.vs/
+bin/
+obj/
+[Rr]estored/
+*.suo
+*.user
